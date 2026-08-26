@@ -1,0 +1,45 @@
+.hdmmb-picker__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+	gap: 16px;
+	margin: 16px 0;
+}
+
+.hdmmb-picker__item {
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	padding: 10px;
+	text-align: center;
+}
+
+.hdmmb-picker__item img {
+	max-width: 100%;
+	height: auto;
+}
+
+.hdmmb-picker__item-name {
+	font-weight: 600;
+	margin-top: 6px;
+}
+
+.hdmmb-picker__stepper {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	margin-top: 8px;
+}
+
+.hdmmb-picker__stepper-input {
+	width: 40px;
+	text-align: center;
+}
+
+.hdmmb-picker__progress {
+	font-weight: 600;
+}
+
+.hdmmb-picker__submit[disabled] {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
