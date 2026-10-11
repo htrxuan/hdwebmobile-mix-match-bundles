@@ -33,16 +33,21 @@ class HDMMB_Cart
      */
     private function get_posted_selection()
     {
-        // Add-to-cart forms are not nonce-protected in WooCommerce core either (see
-        // WC_Form_Handler::add_to_cart_handler_simple()); every value read here is
-        // re-validated server-side in validate_selection() before anything is trusted.
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing
         if (empty($_POST['hdmmb_selection']) || !is_array($_POST['hdmmb_selection'])) {
             return array();
         }
 
+        if (
+            !isset($_POST['hdmmb_add_to_cart_nonce'])
+            || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['hdmmb_add_to_cart_nonce'])), 'hdmmb_add_to_cart')
+        ) {
+            // No valid nonce from our own render_bundle_picker() form -- treat as if nothing
+            // was selected, same as validate_selection() would reject an incomplete pick.
+            return array();
+        }
+
         $selection = array();
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce-verified above; every product_id/qty pair is cast with absint() immediately below and the product_id is re-checked against get_eligible_component_ids() by callers before anything is trusted.
         foreach (wp_unslash($_POST['hdmmb_selection']) as $product_id => $qty) {
             $product_id = absint($product_id);
             $qty        = absint($qty);

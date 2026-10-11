@@ -132,6 +132,7 @@ class HDMMB_Frontend
         }
         ?>
         <form class="cart hdmmb-picker" action="<?php echo esc_url(apply_filters('woocommerce_add_to_cart_form_action', get_permalink($product->get_id()))); /* phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- this is WooCommerce core's own filter, not one we define */ ?>" method="post" enctype="multipart/form-data">
+            <?php wp_nonce_field('hdmmb_add_to_cart', 'hdmmb_add_to_cart_nonce'); ?>
             <p class="hdmmb-picker__instructions">
                 <?php
                 printf(
