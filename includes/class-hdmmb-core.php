@@ -60,12 +60,17 @@ final class HDMMB_Core
 
     public function render_missing_woocommerce_notice()
     {
+        $screen = get_current_screen();
+        if (!$screen || 'plugins' !== $screen->id) {
+            return;
+        }
+
         if (!get_transient('hdmmb_wc_missing_notice')) {
             return;
         }
         delete_transient('hdmmb_wc_missing_notice');
         ?>
-        <div class="notice notice-error">
+        <div class="notice notice-error is-dismissible">
             <p>
                 <?php esc_html_e('HDWebmobile Mix & Match Bundles requires WooCommerce to be installed and active. The plugin has been deactivated.', 'hdwebmobile-mix-match-bundles'); ?>
             </p>

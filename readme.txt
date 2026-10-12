@@ -68,6 +68,7 @@ Once added, the exact picked breakdown (e.g. "2 x Beanie, 2 x Hoodie, 1 x T-Shir
 
 = 1.0.4 =
 * Security hardening: the bundle picker's add-to-cart form now carries its own nonce, verified before any submitted selection is read. Submissions without a valid nonce are treated as an empty selection.
+* The "WooCommerce required" admin notice now appears only on the Plugins screen and can be dismissed.
 * Updated the HDWebmobile hub Overview list with the current set of HDWebmobile plugins.
 
 = 1.0.3 =
