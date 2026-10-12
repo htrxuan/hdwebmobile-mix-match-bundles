@@ -4,7 +4,7 @@
  * Plugin Name: HDWebmobile Mix & Match Bundles
  * Plugin URI: https://hdwebmobile.com/plugins/hdwebmobile-mix-match-bundles/
  * Description: Let customers build their own box: pick a fixed number of items from a category or curated list on a single WooCommerce product.
- * Version: 1.0.3
+ * Version: 1.0.4
  * Author: htrxuan - Han Tran
  * Author URI: https://hdwebmobile.com/
  * License: GPLv2 or later
@@ -23,7 +23,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define Constants
-define('HDMMB_VERSION', '1.0.3');
+define('HDMMB_VERSION', '1.0.4');
 define('HDMMB_PLUGIN_FILE', __FILE__);
 define('HDMMB_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('HDMMB_PLUGIN_URL', plugin_dir_url(__FILE__));

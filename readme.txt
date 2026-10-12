@@ -5,7 +5,7 @@ Tags: woocommerce, bundles, mix and match, build a box, product bundle
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.3
+Stable tag: 1.0.4
 Requires Plugins: woocommerce
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -65,6 +65,10 @@ Once added, the exact picked breakdown (e.g. "2 x Beanie, 2 x Hoodie, 1 x T-Shir
 3. The Cart page showing the exact bundle breakdown attached to the line item.
 
 == Changelog ==
+
+= 1.0.4 =
+* Security hardening: the bundle picker's add-to-cart form now carries its own nonce, verified before any submitted selection is read. Submissions without a valid nonce are treated as an empty selection.
+* Updated the HDWebmobile hub Overview list with the current set of HDWebmobile plugins.
 
 = 1.0.3 =
 * Confirmed compatibility with WordPress 7.1.
