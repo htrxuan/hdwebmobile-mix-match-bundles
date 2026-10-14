@@ -29,6 +29,9 @@ HDWebmobile Mix & Match Bundles turns any WooCommerce simple product into a "bui
 * Component stock is validated at add-to-cart time but is not automatically deducted from component inventory — track component-level stock manually if that precision matters to you
 * Selection is exactly-N only; there is no min/max range picking in this version
 
+= Enjoying this plugin? =
+If it helps your site, please consider [leaving an honest review on WordPress.org](https://wordpress.org/support/plugin/hdwebmobile-mix-match-bundles/reviews/#new-post) -- it helps other WordPress users find it. Found a problem or have an idea? Please [open a support topic](https://wordpress.org/support/plugin/hdwebmobile-mix-match-bundles/) first so it can be fixed.
+
 == Installation ==
 
 1. Upload the plugin files to the `/wp-content/plugins/hdwebmobile-mix-match-bundles` directory, or install the plugin through the WordPress plugins screen directly.
