@@ -5,7 +5,7 @@ Tags: woocommerce, bundles, mix and match, build a box, product bundle
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.4
+Stable tag: 1.1.0
 Requires Plugins: woocommerce
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -21,12 +21,15 @@ HDWebmobile Mix & Match Bundles turns any WooCommerce simple product into a "bui
 * Draw eligible components from a product category or a manual list
 * Customers pick an exact quantity before Add to Cart activates
 * Fixed bundle price or percentage-off-components pricing
+* Component stock deducted when a bundle is ordered, and restored if the order is cancelled
+* Out-of-stock items are hidden from the picker, and the cart checks there is enough stock for every bundle in it
 * Bundle contents shown in cart, checkout, order admin, and order emails — including the WooCommerce Cart and Checkout blocks
+* All your bundles at a glance under WooCommerce > HDWebmobile, with a warning for any bundle that can't be built
 * HPOS (custom order tables) compatible
 
 = Limitations (please read before installing) =
-* Works with simple products only — variable/other product types are not supported in this version
-* Component stock is validated at add-to-cart time but is not automatically deducted from component inventory — track component-level stock manually if that precision matters to you
+* The bundle itself must be a simple product (its components can be any purchasable products)
+* Component stock is only deducted for items that track stock quantity, and is not restocked automatically when you refund a bundle without cancelling the order
 * Selection is exactly-N only; there is no min/max range picking in this version
 
 = Enjoying this plugin? =
@@ -68,6 +71,16 @@ Once added, the exact picked breakdown (e.g. "2 x Beanie, 2 x Hoodie, 1 x T-Shir
 3. The Cart page showing the exact bundle breakdown attached to the line item.
 
 == Changelog ==
+
+= 1.1.0 =
+* New: "Deduct component stock" option on each bundle. When an order reduces stock, the stock of every picked item is reduced too, and restored if the order is cancelled. On by default for new bundles; existing bundles keep their current behavior until you turn it on.
+* New: the Mix & Match tab under WooCommerce > HDWebmobile now lists every bundle with its pick quantity, price, available items and stock setting, and flags bundles that can't be built.
+* New: the cart now checks combined component stock, so raising a bundle's quantity in the cart can no longer oversell an item.
+* Fix: items marked "Out of stock" (without stock quantities) could still be picked; they are now hidden and rejected.
+* Fix: with category sourcing, the bundle product could appear as one of its own components. Bundles, grouped and external products are no longer offered as components.
+* Fix: a fixed-price bundle with an empty "Bundle price" was sold for 0; it now uses the product's own price.
+* Fix: an expired page (for example from a page cache) showed "Please select exactly N items" even when the right number was picked; it now asks the shopper to reload the page.
+* Fix: the item picker no longer caps quantities at the stock level for items that allow backorders.
 
 = 1.0.4 =
 * Security hardening: the bundle picker's add-to-cart form now carries its own nonce, verified before any submitted selection is read. Submissions without a valid nonce are treated as an empty selection.

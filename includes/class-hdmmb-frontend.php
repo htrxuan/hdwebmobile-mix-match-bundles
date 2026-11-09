@@ -91,25 +91,10 @@ class HDMMB_Frontend
 
     private function get_components($product)
     {
-        $source_type = get_post_meta($product->get_id(), '_hdmmb_source_type', true) ?: 'category';
-
-        if ('manual' === $source_type) {
-            $ids = get_post_meta($product->get_id(), '_hdmmb_source_products', true);
-            $ids = is_array($ids) ? $ids : array();
-        } else {
-            $category_id = absint(get_post_meta($product->get_id(), '_hdmmb_source_category', true));
-            $ids         = $category_id ? wc_get_products(array(
-                'product_category_id' => array($category_id),
-                'status'              => 'publish',
-                'limit'               => -1,
-                'return'              => 'ids',
-            )) : array();
-        }
-
         $components = array();
-        foreach ($ids as $id) {
+        foreach (HDMMB_Cart::get_eligible_component_ids($product->get_id()) as $id) {
             $component = wc_get_product($id);
-            if ($component && $component->is_purchasable()) {
+            if (HDMMB_Cart::is_available_component($component)) {
                 $components[] = $component;
             }
         }
@@ -145,7 +130,7 @@ class HDMMB_Frontend
 
             <div class="hdmmb-picker__grid">
                 <?php foreach ($components as $component) : ?>
-                    <div class="hdmmb-picker__item" data-product-id="<?php echo esc_attr($component->get_id()); ?>" data-price="<?php echo esc_attr($component->get_price()); ?>" data-max-stock="<?php echo esc_attr($component->managing_stock() ? $component->get_stock_quantity() : ''); ?>">
+                    <div class="hdmmb-picker__item" data-product-id="<?php echo esc_attr($component->get_id()); ?>" data-price="<?php echo esc_attr($component->get_price()); ?>" data-max-stock="<?php echo esc_attr($component->managing_stock() && !$component->backorders_allowed() ? $component->get_stock_quantity() : ''); ?>">
                         <?php echo wp_kses_post($component->get_image('thumbnail')); ?>
                         <div class="hdmmb-picker__item-name"><?php echo esc_html($component->get_name()); ?></div>
                         <div class="hdmmb-picker__item-price"><?php echo wp_kses_post($component->get_price_html()); ?></div>

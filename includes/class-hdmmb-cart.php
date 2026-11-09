@@ -26,6 +26,13 @@ class HDMMB_Cart
         add_filter('woocommerce_get_cart_item_from_session', array($this, 'get_cart_item_from_session'), 10, 2);
         add_filter('woocommerce_get_item_data', array($this, 'display_item_data'), 10, 2);
         add_action('woocommerce_before_calculate_totals', array($this, 'set_cart_item_price'), 20);
+        add_action('woocommerce_check_cart_items', array($this, 'check_component_stock'));
+    }
+
+    private function has_valid_nonce()
+    {
+        return isset($_POST['hdmmb_add_to_cart_nonce'])
+            && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['hdmmb_add_to_cart_nonce'])), 'hdmmb_add_to_cart');
     }
 
     /**
@@ -33,16 +40,17 @@ class HDMMB_Cart
      */
     private function get_posted_selection()
     {
-        if (empty($_POST['hdmmb_selection']) || !is_array($_POST['hdmmb_selection'])) {
-            return array();
-        }
-
+        // Verified inline (not via has_valid_nonce()) so it visibly precedes every read of the
+        // form data. Without a valid nonce from our own render_bundle_picker() form, treat it as
+        // if nothing was selected; validate_selection() reports that case with its own message.
         if (
             !isset($_POST['hdmmb_add_to_cart_nonce'])
             || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['hdmmb_add_to_cart_nonce'])), 'hdmmb_add_to_cart')
         ) {
-            // No valid nonce from our own render_bundle_picker() form -- treat as if nothing
-            // was selected, same as validate_selection() would reject an incomplete pick.
+            return array();
+        }
+
+        if (empty($_POST['hdmmb_selection']) || !is_array($_POST['hdmmb_selection'])) {
             return array();
         }
 
@@ -69,28 +77,64 @@ class HDMMB_Cart
 
         if ('manual' === $source_type) {
             $source_products = get_post_meta($bundle_id, '_hdmmb_source_products', true);
-            return is_array($source_products) ? array_map('absint', $source_products) : array();
+            $ids             = is_array($source_products) ? array_map('absint', $source_products) : array();
+        } else {
+            $category_id = absint(get_post_meta($bundle_id, '_hdmmb_source_category', true));
+            if (!$category_id) {
+                return array();
+            }
+
+            $ids = array_map('absint', wc_get_products(array(
+                'product_category_id' => array($category_id),
+                'status'              => 'publish',
+                'limit'               => -1,
+                'return'              => 'ids',
+            )));
         }
 
-        $category_id = absint(get_post_meta($bundle_id, '_hdmmb_source_category', true));
-        if (!$category_id) {
-            return array();
+        return array_values(array_filter($ids, function ($id) use ($bundle_id) {
+            return self::is_allowed_component($id, $bundle_id);
+        }));
+    }
+
+    /**
+     * A bundle can't contain itself or another bundle, and grouped/external products have
+     * nothing to put in a box. With category sourcing the bundle product is often in that
+     * same category, which used to list the bundle as one of its own components.
+     */
+    private static function is_allowed_component($component_id, $bundle_id)
+    {
+        if (!$component_id || (int) $component_id === (int) $bundle_id) {
+            return false;
         }
 
-        $products = wc_get_products(array(
-            'product_category_id' => array($category_id),
-            'status'              => 'publish',
-            'limit'               => -1,
-            'return'              => 'ids',
-        ));
+        $component = wc_get_product($component_id);
+        if (!$component || $component->is_type(array('grouped', 'external'))) {
+            return false;
+        }
 
-        return array_map('absint', $products);
+        return 'yes' !== get_post_meta($component->get_id(), '_hdmmb_enabled', true);
+    }
+
+    /**
+     * Whether a component can be picked right now. is_purchasable() alone lets through
+     * products marked "Out of stock" that don't use stock quantities.
+     */
+    public static function is_available_component($component)
+    {
+        return $component && $component->is_purchasable() && $component->is_in_stock();
     }
 
     public function validate_selection($passed, $product_id, $quantity)
     {
         if ('yes' !== get_post_meta($product_id, '_hdmmb_enabled', true)) {
             return $passed;
+        }
+
+        if (!$this->has_valid_nonce()) {
+            // Typically a product page served from a page cache long enough for its nonce to expire.
+            wc_add_notice(__('Your session has expired. Please reload the page and choose your items again.', 'hdwebmobile-mix-match-bundles'), 'error');
+            return false;
         }
 
         $selection = $this->get_posted_selection();
@@ -118,7 +162,7 @@ class HDMMB_Cart
             }
 
             $component = wc_get_product($component_id);
-            if (!$component || !$component->is_purchasable()) {
+            if (!self::is_available_component($component)) {
                 wc_add_notice(__('One of the selected items is no longer available.', 'hdwebmobile-mix-match-bundles'), 'error');
                 return false;
             }
@@ -181,10 +225,8 @@ class HDMMB_Cart
             return;
         }
 
-        if (did_action('woocommerce_before_calculate_totals') >= 2) {
-            return;
-        }
-
+        // No once-per-request guard: setting the price is idempotent, and the Cart/Checkout
+        // blocks recalculate totals several times in one Store API request.
         foreach ($cart->get_cart() as $cart_item) {
             if (empty($cart_item['hdmmb_selection'])) {
                 continue;
@@ -217,11 +259,63 @@ class HDMMB_Cart
             return round($sum * (1 - ($percent / 100)), wc_get_price_decimals());
         }
 
-        if ('fixed' === $mode) {
-            return (float) get_post_meta($bundle_id, '_hdmmb_bundle_price', true);
+        $bundle_price = get_post_meta($bundle_id, '_hdmmb_bundle_price', true);
+        if ('fixed' === $mode && '' !== $bundle_price) {
+            return (float) $bundle_price;
         }
 
+        // Fixed mode with an empty "Bundle price" used to sell the bundle for 0 -- fall back
+        // to the product's own price instead.
         return (float) $bundle_product->get_price();
+    }
+
+    /**
+     * Add-to-cart only checks one bundle's worth of stock. Changing the bundle quantity in the
+     * cart, adding several bundles, or buying a component on its own as well can need more
+     * than is in stock, so check the combined demand per component before checkout.
+     */
+    public function check_component_stock()
+    {
+        $cart = WC()->cart;
+        if (!$cart) {
+            return;
+        }
+
+        $needed = array();
+        foreach ($cart->get_cart() as $cart_item) {
+            if (!empty($cart_item['hdmmb_selection'])) {
+                foreach ($cart_item['hdmmb_selection'] as $component_id => $qty) {
+                    $needed[$component_id] = ($needed[$component_id] ?? 0) + $qty * $cart_item['quantity'];
+                }
+            }
+        }
+
+        if (!$needed) {
+            return;
+        }
+
+        // Standalone cart lines for the same products draw on the same stock.
+        foreach ($cart->get_cart() as $cart_item) {
+            $id = $cart_item['variation_id'] ?: $cart_item['product_id'];
+            if (isset($needed[$id])) {
+                $needed[$id] += $cart_item['quantity'];
+            }
+        }
+
+        foreach ($needed as $component_id => $qty) {
+            $component = wc_get_product($component_id);
+            if ($component && $component->managing_stock() && !$component->has_enough_stock($qty)) {
+                wc_add_notice(
+                    sprintf(
+                        /* translators: 1: product name, 2: quantity in stock */
+                        __('Not enough "%1$s" in stock for the bundles in your cart (%2$s available). Please reduce the bundle quantity.', 'hdwebmobile-mix-match-bundles'),
+                        $component->get_name(),
+                        wc_format_stock_quantity_for_display($component->get_stock_quantity(), $component)
+                    ),
+                    'error'
+                );
+            }
+        }
     }
 
     /**

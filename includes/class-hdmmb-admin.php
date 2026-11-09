@@ -30,10 +30,8 @@ class HDMMB_Admin
     }
 
     /**
-     * This plugin has no per-product-independent settings of its own (everything lives on
-     * the product-data tab), so this hub tab exists solely to host the "more plugins by
-     * this author" panel -- kept minimal rather than skipped, so every hdwebmobile plugin
-     * offers the same discovery path.
+     * Every setting lives on the product-data tab, so this hub tab is an overview of the
+     * store's bundles: what each one is set to, with a link straight to its settings.
      */
     public function register_hub_tabs($tabs)
     {
@@ -47,8 +45,80 @@ class HDMMB_Admin
 
     public function render_plugins_page()
     {
+        $bundles = wc_get_products(array(
+            'status'     => array('publish', 'draft', 'pending', 'private'),
+            'limit'      => -1,
+            'orderby'    => 'title',
+            'order'      => 'ASC',
+            'meta_key'   => '_hdmmb_enabled', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- admin-only screen, one query.
+            'meta_value' => 'yes', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+        ));
         ?>
-        <p><?php esc_html_e('Let customers build their own box: pick a fixed number of items from a category or curated list on a single WooCommerce product. There\'s nothing to configure here -- go to any simple product\'s own "Mix & Match" tab under Product Data to enable it and choose the eligible items.', 'hdwebmobile-mix-match-bundles'); ?></p>
+        <p><?php esc_html_e('Let customers build their own box by picking a set number of items on one product page. Each bundle is set up in its own product\'s "Mix & Match" tab under Product data.', 'hdwebmobile-mix-match-bundles'); ?></p>
+
+        <?php if (empty($bundles)) : ?>
+            <p><strong><?php esc_html_e('No bundles yet.', 'hdwebmobile-mix-match-bundles'); ?></strong>
+                <?php esc_html_e('Create a simple product, open its "Mix & Match" tab and tick "Enable Mix & Match".', 'hdwebmobile-mix-match-bundles'); ?></p>
+            <p><a class="button button-primary" href="<?php echo esc_url(admin_url('post-new.php?post_type=product')); ?>"><?php esc_html_e('Create a bundle product', 'hdwebmobile-mix-match-bundles'); ?></a></p>
+            <?php
+            return;
+        endif;
+        ?>
+        <table class="widefat striped" style="max-width:1100px;margin-top:12px;">
+            <thead>
+                <tr>
+                    <th><?php esc_html_e('Bundle', 'hdwebmobile-mix-match-bundles'); ?></th>
+                    <th><?php esc_html_e('Pick', 'hdwebmobile-mix-match-bundles'); ?></th>
+                    <th><?php esc_html_e('Price', 'hdwebmobile-mix-match-bundles'); ?></th>
+                    <th><?php esc_html_e('Items to choose from', 'hdwebmobile-mix-match-bundles'); ?></th>
+                    <th><?php esc_html_e('Deducts item stock', 'hdwebmobile-mix-match-bundles'); ?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($bundles as $bundle) : ?>
+                    <?php
+                    $id        = $bundle->get_id();
+                    $pick_qty  = absint(get_post_meta($id, '_hdmmb_pick_qty', true));
+                    $available = 0;
+                    foreach (HDMMB_Cart::get_eligible_component_ids($id) as $component_id) {
+                        if (HDMMB_Cart::is_available_component(wc_get_product($component_id))) {
+                            $available++;
+                        }
+                    }
+
+                    if ('discount_percent' === get_post_meta($id, '_hdmmb_pricing_mode', true)) {
+                        /* translators: %s: discount percentage */
+                        $price = sprintf(__('%s%% off picked items', 'hdwebmobile-mix-match-bundles'), wc_format_localized_decimal((float) get_post_meta($id, '_hdmmb_discount_percent', true)));
+                    } else {
+                        $price = wp_strip_all_tags(wc_price(HDMMB_Cart::calculate_bundle_price($bundle, array())));
+                    }
+
+                    // Same problems that make the product page fall back to a normal Add to cart button.
+                    $problem = '';
+                    if (!$pick_qty) {
+                        $problem = __('Pick quantity not set', 'hdwebmobile-mix-match-bundles');
+                    } elseif (!$available) {
+                        $problem = __('No items in stock to choose from', 'hdwebmobile-mix-match-bundles');
+                    }
+                    ?>
+                    <tr>
+                        <td>
+                            <strong><a href="<?php echo esc_url(get_edit_post_link($id)); ?>"><?php echo esc_html($bundle->get_name()); ?></a></strong>
+                            <?php if ('publish' !== $bundle->get_status()) : ?>
+                                &mdash; <?php echo esc_html(get_post_status_object($bundle->get_status())->label ?? $bundle->get_status()); ?>
+                            <?php endif; ?>
+                            <?php if ($problem) : ?>
+                                <br><span style="color:#b32d2e;"><?php echo esc_html($problem); ?></span>
+                            <?php endif; ?>
+                        </td>
+                        <td><?php echo $pick_qty ? esc_html($pick_qty) : '&mdash;'; ?></td>
+                        <td><?php echo esc_html($price); ?></td>
+                        <td><?php echo esc_html($available); ?></td>
+                        <td><?php echo 'yes' === get_post_meta($id, '_hdmmb_deduct_stock', true) ? esc_html__('Yes', 'hdwebmobile-mix-match-bundles') : esc_html__('No', 'hdwebmobile-mix-match-bundles'); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
         <?php
     }
 
@@ -104,6 +174,10 @@ class HDMMB_Admin
         $source_category  = get_post_meta($product_id, '_hdmmb_source_category', true);
         $source_products  = get_post_meta($product_id, '_hdmmb_source_products', true);
         $source_products  = is_array($source_products) ? $source_products : array();
+        // On by default for new bundles; bundles set up before 1.1.0 keep their old behavior
+        // (no deduction) until the merchant turns it on.
+        $deduct_stock     = get_post_meta($product_id, '_hdmmb_deduct_stock', true);
+        $deduct_stock     = '' === $deduct_stock && '' === $enabled ? 'yes' : ($deduct_stock ?: 'no');
 
         wp_nonce_field('hdmmb_save_meta', 'hdmmb_meta_nonce');
         ?>
@@ -207,6 +281,15 @@ class HDMMB_Admin
                         ?>
                     </select>
                 </p>
+
+                <?php
+                woocommerce_wp_checkbox(array(
+                    'id'          => '_hdmmb_deduct_stock',
+                    'label'       => __('Deduct component stock', 'hdwebmobile-mix-match-bundles'),
+                    'description' => __('When an order reduces stock, also reduce the stock of each picked item (for items that track stock quantity). Restored if the order is cancelled.', 'hdwebmobile-mix-match-bundles'),
+                    'value'       => $deduct_stock,
+                ));
+                ?>
             </div>
         </div>
         <?php
@@ -228,6 +311,7 @@ class HDMMB_Admin
 
         $enabled = isset($_POST['_hdmmb_enabled']) ? 'yes' : 'no';
         update_post_meta($post_id, '_hdmmb_enabled', $enabled);
+        update_post_meta($post_id, '_hdmmb_deduct_stock', isset($_POST['_hdmmb_deduct_stock']) ? 'yes' : 'no');
 
         if (isset($_POST['_hdmmb_pick_qty'])) {
             update_post_meta($post_id, '_hdmmb_pick_qty', absint($_POST['_hdmmb_pick_qty']));
