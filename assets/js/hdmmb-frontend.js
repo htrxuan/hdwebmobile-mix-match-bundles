@@ -11,6 +11,8 @@
 	}
 
 	var pickQty       = parseInt(hdmmbParams.pick_qty, 10) || 0;
+	var minQty        = parseInt(hdmmbParams.min_qty, 10) || pickQty;
+	var maxQty        = parseInt(hdmmbParams.max_qty, 10) || pickQty;
 	var progressEl    = form.querySelector('.hdmmb-picker__progress');
 	var pricePreviewEl = form.querySelector('.hdmmb-picker__price-preview');
 	var submitButton  = form.querySelector('.hdmmb-picker__submit');
@@ -43,9 +45,11 @@
 
 		progressEl.textContent = hdmmbParams.i18n.progress
 			.replace('%1$d', total)
-			.replace('%2$d', pickQty);
+			.replace('%2$d', maxQty);
 
-		submitButton.disabled = total !== pickQty;
+		submitButton.disabled = total < minQty || total > maxQty || total === 0;
+		form.classList.toggle('hdmmb-picker--full', total >= maxQty);
+		form.dispatchEvent(new CustomEvent('hdmmb:change', { detail: { selection: selection, total: total } }));
 
 		clearTimeout(debounceTimer);
 		debounceTimer = setTimeout(function () {
@@ -99,7 +103,8 @@
 
 		plusBtn.addEventListener('click', function () {
 			var qty = parseInt(input.value, 10) || 0;
-			if (maxStock === null || qty < maxStock) {
+			var total = getTotalQty(getSelection());
+			if ((maxStock === null || qty < maxStock) && total < maxQty) {
 				input.value = qty + 1;
 				updateProgress();
 			}

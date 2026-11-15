@@ -289,6 +289,13 @@ class HDMMB_Admin
                     'description' => __('When an order reduces stock, also reduce the stock of each picked item (for items that track stock quantity). Restored if the order is cancelled.', 'hdwebmobile-mix-match-bundles'),
                     'value'       => $deduct_stock,
                 ));
+
+                /**
+                 * Fires at the end of the Mix & Match product settings, for extra options.
+                 *
+                 * @param int $product_id Bundle product ID.
+                 */
+                do_action('hdmmb_product_options', (int) $product_id);
                 ?>
             </div>
         </div>

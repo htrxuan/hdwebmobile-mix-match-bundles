@@ -70,6 +70,8 @@ class HDMMB_Frontend
             'nonce'      => wp_create_nonce('hdmmb_frontend_nonce'),
             'product_id' => $product->get_id(),
             'pick_qty'   => absint(get_post_meta($product->get_id(), '_hdmmb_pick_qty', true)),
+            'min_qty'    => HDMMB_Cart::get_pick_rules($product->get_id())['min'],
+            'max_qty'    => HDMMB_Cart::get_pick_rules($product->get_id())['max'],
             'i18n'       => array(
                 /* translators: %1$d: selected count, %2$d: required count */
                 'progress' => __('Selected: %1$d / %2$d', 'hdwebmobile-mix-match-bundles'),
@@ -107,7 +109,8 @@ class HDMMB_Frontend
         global $product;
 
         $components = $this->get_components($product);
-        $pick_qty   = absint(get_post_meta($product->get_id(), '_hdmmb_pick_qty', true));
+        $rules      = HDMMB_Cart::get_pick_rules($product->get_id());
+        $pick_qty   = $rules['max'];
 
         if (empty($components) || !$pick_qty) {
             // Fall back to the normal simple-product add-to-cart template (already removed
@@ -120,11 +123,20 @@ class HDMMB_Frontend
             <?php wp_nonce_field('hdmmb_add_to_cart', 'hdmmb_add_to_cart_nonce'); ?>
             <p class="hdmmb-picker__instructions">
                 <?php
-                printf(
-                    /* translators: %d: required quantity */
-                    esc_html__('Choose exactly %d items to build your bundle:', 'hdwebmobile-mix-match-bundles'),
-                    absint($pick_qty)
-                );
+                if ($rules['min'] === $rules['max']) {
+                    printf(
+                        /* translators: %d: required quantity */
+                        esc_html__('Choose exactly %d items to build your bundle:', 'hdwebmobile-mix-match-bundles'),
+                        absint($pick_qty)
+                    );
+                } else {
+                    printf(
+                        /* translators: 1: minimum quantity, 2: maximum quantity */
+                        esc_html__('Choose between %1$d and %2$d items to build your bundle:', 'hdwebmobile-mix-match-bundles'),
+                        absint($rules['min']),
+                        absint($rules['max'])
+                    );
+                }
                 ?>
             </p>
 
@@ -151,6 +163,16 @@ class HDMMB_Frontend
             </p>
 
             <p class="hdmmb-picker__price-preview"></p>
+
+            <?php
+            /**
+             * Fires inside the bundle picker form, after the progress and price preview.
+             * Fields added here are submitted with the bundle.
+             *
+             * @param \WC_Product $product Bundle product.
+             */
+            do_action('hdmmb_picker_after_grid', $product);
+            ?>
 
             <input type="hidden" name="add-to-cart" value="<?php echo esc_attr($product->get_id()); ?>" />
             <input type="hidden" name="quantity" value="1" />

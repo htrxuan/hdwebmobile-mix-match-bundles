@@ -92,9 +92,37 @@ class HDMMB_Cart
             )));
         }
 
-        return array_values(array_filter($ids, function ($id) use ($bundle_id) {
+        /**
+         * Filters the product IDs that can be picked for a bundle, before the built-in checks
+         * (a bundle never contains itself, another bundle, or grouped/external products).
+         *
+         * @param int[] $ids       Candidate product IDs.
+         * @param int   $bundle_id Bundle product ID.
+         */
+        $ids = array_map('absint', (array) apply_filters('hdmmb_eligible_component_ids', $ids, (int) $bundle_id));
+
+        return array_values(array_unique(array_filter($ids, function ($id) use ($bundle_id) {
             return self::is_allowed_component($id, $bundle_id);
-        }));
+        })));
+    }
+
+    /**
+     * How many items a customer must pick: array('min' => int, 'max' => int).
+     * The plugin itself always uses exactly the "Pick quantity" (min = max).
+     */
+    public static function get_pick_rules($bundle_id)
+    {
+        $pick  = absint(get_post_meta($bundle_id, '_hdmmb_pick_qty', true));
+        /**
+         * Filters the number of items a customer must pick for a bundle.
+         *
+         * @param array $rules     array('min' => int, 'max' => int).
+         * @param int   $bundle_id Bundle product ID.
+         */
+        $rules = (array) apply_filters('hdmmb_pick_rules', array('min' => $pick, 'max' => $pick), (int) $bundle_id);
+        $min   = absint($rules['min'] ?? $pick);
+        $max   = max($min, absint($rules['max'] ?? $pick));
+        return array('min' => $min, 'max' => $max);
     }
 
     /**
@@ -138,18 +166,25 @@ class HDMMB_Cart
         }
 
         $selection = $this->get_posted_selection();
-        $pick_qty  = absint(get_post_meta($product_id, '_hdmmb_pick_qty', true));
+        $rules     = self::get_pick_rules($product_id);
         $eligible  = self::get_eligible_component_ids($product_id);
 
         $total_qty = array_sum($selection);
 
-        if ($total_qty !== $pick_qty) {
+        if ($total_qty < $rules['min'] || $total_qty > $rules['max'] || 0 === $total_qty) {
             wc_add_notice(
-                sprintf(
-                    /* translators: %d: required quantity */
-                    __('Please select exactly %d items for this bundle.', 'hdwebmobile-mix-match-bundles'),
-                    $pick_qty
-                ),
+                $rules['min'] === $rules['max']
+                    ? sprintf(
+                        /* translators: %d: required quantity */
+                        __('Please select exactly %d items for this bundle.', 'hdwebmobile-mix-match-bundles'),
+                        $rules['min']
+                    )
+                    : sprintf(
+                        /* translators: 1: minimum quantity, 2: maximum quantity */
+                        __('Please select between %1$d and %2$d items for this bundle.', 'hdwebmobile-mix-match-bundles'),
+                        $rules['min'],
+                        $rules['max']
+                    ),
                 'error'
             );
             return false;
@@ -180,7 +215,15 @@ class HDMMB_Cart
             }
         }
 
-        return $passed;
+        /**
+         * Filters whether a valid-looking selection may be added to the cart. Add a notice with
+         * wc_add_notice() when returning false.
+         *
+         * @param bool  $passed     Whether the selection passed the plugin's own checks.
+         * @param array $selection  Picked items: array(product_id => quantity).
+         * @param int   $product_id Bundle product ID.
+         */
+        return (bool) apply_filters('hdmmb_validate_selection', $passed, $selection, (int) $product_id);
     }
 
     public function add_cart_item_data($cart_item_data, $product_id)
@@ -256,17 +299,29 @@ class HDMMB_Cart
             }
 
             $percent = (float) get_post_meta($bundle_id, '_hdmmb_discount_percent', true);
-            return round($sum * (1 - ($percent / 100)), wc_get_price_decimals());
+            return self::filter_price(round($sum * (1 - ($percent / 100)), wc_get_price_decimals()), $bundle_product, $selection);
         }
 
         $bundle_price = get_post_meta($bundle_id, '_hdmmb_bundle_price', true);
         if ('fixed' === $mode && '' !== $bundle_price) {
-            return (float) $bundle_price;
+            return self::filter_price((float) $bundle_price, $bundle_product, $selection);
         }
 
         // Fixed mode with an empty "Bundle price" used to sell the bundle for 0 -- fall back
         // to the product's own price instead.
-        return (float) $bundle_product->get_price();
+        return self::filter_price((float) $bundle_product->get_price(), $bundle_product, $selection);
+    }
+
+    /**
+     * Filters the final bundle price (cart and live preview alike).
+     *
+     * @param float       $price          Calculated bundle price.
+     * @param \WC_Product $bundle_product Bundle product.
+     * @param array       $selection      Picked items: array(product_id => quantity).
+     */
+    private static function filter_price($price, $bundle_product, array $selection)
+    {
+        return (float) apply_filters('hdmmb_bundle_price', $price, $bundle_product, $selection);
     }
 
     /**

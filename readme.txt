@@ -5,7 +5,7 @@ Tags: woocommerce, bundles, mix and match, build a box, product bundle
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.1
+Stable tag: 1.2.0
 Requires Plugins: woocommerce
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -70,7 +70,26 @@ Once added, the exact picked breakdown (e.g. "2 x Beanie, 2 x Hoodie, 1 x T-Shir
 2. The frontend bundle picker: steppers per component, a live "Selected: X / Y" counter, and running total.
 3. The Cart page showing the exact bundle breakdown attached to the line item.
 
+== For developers ==
+
+Filters and actions for extending the plugin:
+
+* `hdmmb_eligible_component_ids` (filter): the product IDs a bundle can be built from. Arguments: `$ids`, `$bundle_id`.
+* `hdmmb_pick_rules` (filter): how many items must be picked, as `array( 'min' => int, 'max' => int )`. By default both equal the "Pick quantity". Arguments: `$rules`, `$bundle_id`.
+* `hdmmb_validate_selection` (filter): accept or reject a selection before it is added to the cart. Arguments: `$passed`, `$selection`, `$product_id`.
+* `hdmmb_bundle_price` (filter): the final bundle price, used in the cart and in the live price preview. Arguments: `$price`, `$bundle_product`, `$selection`.
+* `hdmmb_picker_after_grid` (action): output extra fields inside the bundle picker form. Argument: `$product`.
+* `hdmmb_product_options` (action): output extra settings at the end of the Mix & Match product tab. Argument: `$product_id`.
+
+The picker form also fires a `hdmmb:change` DOM event with the current selection and total whenever it changes.
+
 == Changelog ==
+
+= 1.2.0 =
+* New: filters and actions for developers (see "For developers"), so the picking rules, eligible items and bundle price can be extended.
+* Better: the + button stops once the required number of items is picked, so customers can't pick more than the bundle allows.
+* No change to how existing bundles work.
+
 
 = 1.1.1 =
 * The WooCommerce > HDWebmobile Overview page now has a short introduction to Store Guardian, a separate paid plugin that test-buys from your checkout every hour. It is hidden once Store Guardian is active. No changes to this plugin's own features.
