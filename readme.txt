@@ -5,7 +5,7 @@ Tags: woocommerce, bundles, mix and match, build a box, product bundle
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 Requires Plugins: woocommerce
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -71,6 +71,9 @@ Once added, the exact picked breakdown (e.g. "2 x Beanie, 2 x Hoodie, 1 x T-Shir
 3. The Cart page showing the exact bundle breakdown attached to the line item.
 
 == Changelog ==
+
+= 1.1.1 =
+* The WooCommerce > HDWebmobile Overview page now has a short introduction to Store Guardian, a separate paid plugin that test-buys from your checkout every hour. It is hidden once Store Guardian is active. No changes to this plugin's own features.
 
 = 1.1.0 =
 * New: "Deduct component stock" option on each bundle. When an order reduces stock, the stock of every picked item is reduced too, and restored if the order is cancelled. On by default for new bundles; existing bundles keep their current behavior until you turn it on.
