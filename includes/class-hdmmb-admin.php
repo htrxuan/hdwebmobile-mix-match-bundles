@@ -56,6 +56,13 @@ class HDMMB_Admin
         ?>
         <p><?php esc_html_e('Let customers build their own box by picking a set number of items on one product page. Each bundle is set up in its own product\'s "Mix & Match" tab under Product data.', 'hdwebmobile-mix-match-bundles'); ?></p>
 
+        <?php if (!defined('HDMMBP_VERSION')) : ?>
+            <p class="description">
+                <?php esc_html_e('Need "choose 4 to 8 items", quantity discounts, variable products or gift messages? They are in Mix & Match Bundles Pro, a separate paid add-on. Everything on this page stays free.', 'hdwebmobile-mix-match-bundles'); ?>
+                <a href="https://hdwebmobile.com/plugins/hdwebmobile-mix-match-bundles-pro/" target="_blank" rel="noopener"><?php esc_html_e('Learn more', 'hdwebmobile-mix-match-bundles'); ?></a>
+            </p>
+        <?php endif; ?>
+
         <?php if (empty($bundles)) : ?>
             <p><strong><?php esc_html_e('No bundles yet.', 'hdwebmobile-mix-match-bundles'); ?></strong>
                 <?php esc_html_e('Create a simple product, open its "Mix & Match" tab and tick "Enable Mix & Match".', 'hdwebmobile-mix-match-bundles'); ?></p>

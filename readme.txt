@@ -32,6 +32,9 @@ HDWebmobile Mix & Match Bundles turns any WooCommerce simple product into a "bui
 * Component stock is only deducted for items that track stock quantity, and is not restocked automatically when you refund a bundle without cancelling the order
 * Selection is exactly-N only; there is no min/max range picking in this version
 
+= Need more? =
+Everything above is free and stays free. For stores that need a pick range ("choose 4 to 8 items"), quantity discounts, variable products, gift messages or restocking on refunds, there is a separate paid add-on, [Mix & Match Bundles Pro](https://hdwebmobile.com/plugins/hdwebmobile-mix-match-bundles-pro/).
+
 = Enjoying this plugin? =
 If it helps your site, please consider [leaving an honest review on WordPress.org](https://wordpress.org/support/plugin/hdwebmobile-mix-match-bundles/reviews/#new-post) -- it helps other WordPress users find it. Found a problem or have an idea? Please [open a support topic](https://wordpress.org/support/plugin/hdwebmobile-mix-match-bundles/) first so it can be fixed.
 
@@ -88,6 +91,7 @@ The picker form also fires a `hdmmb:change` DOM event with the current selection
 = 1.2.0 =
 * New: filters and actions for developers (see "For developers"), so the picking rules, eligible items and bundle price can be extended.
 * Better: the + button stops once the required number of items is picked, so customers can't pick more than the bundle allows.
+* The bundle overview (WooCommerce > HDWebmobile > Mix & Match Bundles) mentions the separate Pro add-on.
 * No change to how existing bundles work.
 
 
